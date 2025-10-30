@@ -1,23 +1,31 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import Request
+from fastapi import Response
 from fastapi.security import HTTPBasicCredentials
 from fastapi_limiter.depends import RateLimiter
 from starlette.background import BackgroundTasks
 
-from backend.app.admin.schema.token import GetLoginToken, GetNewToken, GetSwaggerToken
+from backend.app.admin.schema.token import GetLoginToken
+from backend.app.admin.schema.token import GetNewToken
+from backend.app.admin.schema.token import GetSwaggerToken
 from backend.app.admin.schema.user import AuthLoginParam
 from backend.app.admin.service.auth_service import auth_service
-from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
+from backend.common.response.response_schema import response_base
+from backend.common.response.response_schema import ResponseModel
+from backend.common.response.response_schema import ResponseSchemaModel
 from backend.common.security.jwt import DependsJwtAuth
-from backend.database.db import CurrentSession, CurrentSessionTransaction
+from backend.database.db import CurrentSession
+from backend.database.db import CurrentSessionTransaction
 
 router = APIRouter()
 
 
 @router.post('/login/swagger', summary='swagger 调试专用', description='用于快捷获取 token 进行 swagger 认证')
 async def login_swagger(
-    db: CurrentSessionTransaction, obj: Annotated[HTTPBasicCredentials, Depends()]
+        db: CurrentSessionTransaction, obj: Annotated[HTTPBasicCredentials, Depends()]
 ) -> GetSwaggerToken:
     token, user = await auth_service.swagger_login(db=db, obj=obj)
     return GetSwaggerToken(access_token=token, user=user)
@@ -30,10 +38,10 @@ async def login_swagger(
     dependencies=[Depends(RateLimiter(times=5, minutes=1))],
 )
 async def login(
-    db: CurrentSessionTransaction,
-    response: Response,
-    obj: AuthLoginParam,
-    background_tasks: BackgroundTasks,
+        db: CurrentSessionTransaction,
+        response: Response,
+        obj: AuthLoginParam,
+        background_tasks: BackgroundTasks,
 ) -> ResponseSchemaModel[GetLoginToken]:
     data = await auth_service.login(db=db, response=response, obj=obj, background_tasks=background_tasks)
     return response_base.success(data=data)
