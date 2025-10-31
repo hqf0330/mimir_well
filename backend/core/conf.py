@@ -1,9 +1,11 @@
 from functools import lru_cache
 from re import Pattern
-from typing import Any, Literal
+from typing import Any
+from typing import Literal
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict
 
 from backend.core.path_conf import BASE_PATH
 
@@ -51,6 +53,15 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_TIMEOUT: int = 5
+
+    # Neo4j
+    NEO4J_URI: str
+    NEO4J_USER: str
+    NEO4J_PASSWORD: str
+
+    # Milvus
+    MILVUS_HOST: str
+    MILVUS_PORT: int
 
     # .env Token
     TOKEN_SECRET_KEY: str  # 密钥 secrets.token_urlsafe(32)
