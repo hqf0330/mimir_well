@@ -1,10 +1,16 @@
-from typing import Any, Sequence
+from typing import Any
+from typing import Sequence
 
+import sqlalchemy
+from sqlalchemy import create_engine
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.ai_data.crud.crud_conn_source import conn_source_dao
 from backend.app.ai_data.model import ConnSource
-from backend.app.ai_data.schema.conn_source import CreateConnSourceParam, DeleteConnSourceParam, UpdateConnSourceParam
+from backend.app.ai_data.schema.conn_source import CreateConnSourceParam
+from backend.app.ai_data.schema.conn_source import DeleteConnSourceParam
+from backend.app.ai_data.schema.conn_source import UpdateConnSourceParam
 from backend.common.exception import errors
 from backend.common.pagination import paging_data
 
@@ -81,6 +87,30 @@ class ConnSourceService:
         """
         count = await conn_source_dao.delete(db, obj.pks)
         return count
+
+    @staticmethod
+    def _get_db_engine_sync(cs: ConnSource) -> sqlalchemy.Engine:
+        cs_type = cs.conn_type.lower()
+        if cs_type == "mysql":
+            conn_str = (
+                f"mysql+pymysql://{cs.username}:"
+                f"{cs.password_encrypted}@"
+                f"{cs.host}:{cs.port}/{cs.db_name}"
+            )
+            return create_engine(conn_str, pool_pre_ping=True)
+        else:
+            raise errors.NotFoundError(msg=f"Unknown connection type: {cs_type}")
+
+    @staticmethod
+    async def check_db_conn(cs: ConnSource) -> dict[str, Any]:
+        try:
+            engine = ConnSourceService._get_db_engine_sync(cs=cs)
+            with engine.connect() as conn:
+                result = conn.execute(text('SELECT 1'))
+                result.fetchone()
+                return {'status': 'success', 'message': '连接成功'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
 
 
 conn_source_service: ConnSourceService = ConnSourceService()

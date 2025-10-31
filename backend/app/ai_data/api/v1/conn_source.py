@@ -1,28 +1,31 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import Path
 
-from backend.app.ai_data.schema.conn_source import (
-    CreateConnSourceParam,
-    DeleteConnSourceParam,
-    GetConnSourceDetail,
-    UpdateConnSourceParam,
-)
+from backend.app.ai_data.schema.conn_source import CreateConnSourceParam
+from backend.app.ai_data.schema.conn_source import DeleteConnSourceParam
+from backend.app.ai_data.schema.conn_source import GetConnSourceDetail
+from backend.app.ai_data.schema.conn_source import UpdateConnSourceParam
 from backend.app.ai_data.service.conn_source_service import conn_source_service
-from backend.common.pagination import DependsPagination, PageData
-from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
+from backend.common.pagination import DependsPagination
+from backend.common.pagination import PageData
+from backend.common.response.response_schema import response_base
+from backend.common.response.response_schema import ResponseModel
+from backend.common.response.response_schema import ResponseSchemaModel
 from backend.common.security.jwt import DependsJwtAuth
 from backend.common.security.permission import RequestPermission
 from backend.common.security.rbac import DependsRBAC
-from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.database.db import CurrentSession
+from backend.database.db import CurrentSessionTransaction
 
 router = APIRouter()
 
 
 @router.get('/{pk}', summary='获取数据源详情', dependencies=[DependsJwtAuth])
 async def get_conn_source(
-    db: CurrentSession, pk: Annotated[int, Path(description='数据源 ID')]
+        db: CurrentSession, pk: Annotated[int, Path(description='数据源 ID')]
 ) -> ResponseSchemaModel[GetConnSourceDetail]:
     conn_source = await conn_source_service.get(db=db, pk=pk)
     return response_base.success(data=conn_source)
@@ -63,7 +66,7 @@ async def create_conn_source(db: CurrentSessionTransaction, obj: CreateConnSourc
     ],
 )
 async def update_conn_source(
-    db: CurrentSessionTransaction, pk: Annotated[int, Path(description='数据源 ID')], obj: UpdateConnSourceParam
+        db: CurrentSessionTransaction, pk: Annotated[int, Path(description='数据源 ID')], obj: UpdateConnSourceParam
 ) -> ResponseModel:
     count = await conn_source_service.update(db=db, pk=pk, obj=obj)
     if count > 0:
@@ -84,3 +87,24 @@ async def delete_conn_sources(db: CurrentSessionTransaction, obj: DeleteConnSour
     if count > 0:
         return response_base.success()
     return response_base.fail()
+
+
+@router.post(
+    '/{pk}/test',
+    summary='测试数据源连接',
+    dependencies=[DependsJwtAuth],
+)
+async def test_conn_source(
+        db: CurrentSession, pk: Annotated[int, Path(description='数据源 ID')]
+) -> ResponseSchemaModel:
+    """
+    测试数据源连接是否正常
+    """
+    conn_source = await conn_source_service.get(db=db, pk=pk)
+    result = await conn_source_service.check_db_conn(cs=conn_source)
+    if result is None:
+        return response_base.fail()
+    elif result['status'] == 'error':
+        return response_base.fail()
+    else:
+        return response_base.success(data=result)
